@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نظام إدارة وحجوزات منتجع الواحة السياحي</title>
+  <!-- Bootstrap 5 RTL -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary-color: #1e3a8a;
+      --secondary-color: #0d9488;
+      --accent-color: #f59e0b;
+      --bg-light: #f8fafc;
+    }
+    body {
+      background-color: var(--bg-light);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #1e293b;
+    }
+    .navbar-brand {
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .nav-tabs .nav-link {
+      font-weight: 600;
+      color: #475569;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 8px 8px 0 0;
+      transition: all 0.2s;
+    }
+    .nav-tabs .nav-link:hover {
+      color: var(--primary-color);
+      background-color: #e2e8f0;
+    }
+    .nav-tabs .nav-link.active {
+      color: var(--primary-color);
+      background-color: #ffffff;
+      border-bottom: 3px solid var(--primary-color);
+    }
+    .card {
+      border: none;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+      background: #ffffff;
+    }
+    .card-header {
+      border-top-left-radius: 12px !important;
+      border-top-right-radius: 12px !important;
+      font-weight: 700;
+      background-color: #ffffff;
+      border-bottom: 1px solid #f1f5f9;
+      padding: 16px 20px;
+    }
+    .kpi-card {
+      padding: 20px;
+      border-radius: 12px;
+      color: #ffffff;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+    }
+    .kpi-card .icon-bg {
+      position: absolute;
+      left: -10px;
+      bottom: -15px;
+      font-size: 5rem;
+      opacity: 0.18;
+    }
+    .form-label {
+      font-weight: 600;
+      font-size: 0.88rem;
+      color: #334155;
+      margin-bottom: 6px;
+    }
+    .form-control, .form-select {
+      border-radius: 8px;
+      padding: 10px 14px;
+      border: 1px solid #cbd5e1;
+    }
+    .form-control:focus, .form-select:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.15);
+    }
+    .badge-status {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 0.8rem;
+    }
+    .rule-box {
+      background-color: #fef3c7;
+      border-right: 4px solid #f59e0b;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      color: #92400e;
+    }
+    .img-preview {
+      max-width: 100%;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 2px dashed #cbd5e1;
+      display: none;
+    }
+    .table thead th {
+      background-color: #f1f5f9;
+      color: #334155;
+      font-weight: 700;
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- شريط التنقل العلوي -->
+  <nav class="navbar navbar-expand-lg navbar-dark shadow-sm" style="background-color: var(--primary-color);">
+    <div class="container-fluid px-4">
+      <a class="navbar-brand d-flex align-items-center gap-2" href="#">
+        <i class="fa-solid fa-umbrella-beach fs-3 text-warning"></i>
+        <span>منتجع الواحة السياحي <small class="fw-normal fs-6 opacity-75">| نظام الحجوزات والمالية المتكامل</small></span>
+      </a>
+      <span class="badge bg-light text-dark px-3 py-2 rounded-pill fw-semibold">
+        <i class="fa-regular fa-calendar-check text-primary me-1"></i> الحديدة - اليمن
+      </span>
+    </div>
+  </nav>
+
+  <div class="container-fluid px-4 py-4">
+
+    <!-- شريط التبويبات الرئيسي (واجهات النظام) -->
+    <ul class="nav nav-tabs mb-4" id="resortTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="reports-tab" data-bs-toggle="tab" data-bs-target="#tab-reports" type="button" role="tab">
+          <i class="fa-solid fa-chart-pie me-1 text-primary"></i> واجهة التقارير ولوحة المؤشرات
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="stay-tab" data-bs-toggle="tab" data-bs-target="#tab-stay" type="button" role="tab">
+          <i class="fa-solid fa-bed me-1 text-success"></i> واجهة حجز خدمات التسكين (غرف، أجنحة، شقق، شاليهات)
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="facility-tab" data-bs-toggle="tab" data-bs-target="#tab-facility" type="button" role="tab">
+          <i class="fa-solid fa-water-ladder me-1 text-info"></i> واجهة حجز المسابح العائلية والنادي الصحي (بالساعة)
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="ledger-tab" data-bs-toggle="tab" data-bs-target="#tab-ledger" type="button" role="tab">
+          <i class="fa-solid fa-receipt me-1 text-warning"></i> سجل الحجوزات وسندات التحويل
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="units-tab" data-bs-toggle="tab" data-bs-target="#tab-units" type="button" role="tab">
+          <i class="fa-solid fa-list-check me-1 text-secondary"></i> دليل الوحدات والتسعير
+        </button>
+      </li>
+    </ul>
+
+    <!-- محتوى التبويبات -->
+    <div class="tab-content" id="resortTabsContent">
+
+      <!-- ========================================== -->
+      <!-- 1. واجهة التقارير ولوحة المؤشرات -->
+      <!-- ========================================== -->
+      <div class="tab-pane fade show active" id="tab-reports" role="tabpanel">
+        
+        <!-- بطاقات المؤشرات المالية والتشغيلية -->
+        <div class="row g-3 mb-4">
+          <div class="col-md-3">
+            <div class="kpi-card" style="background: linear-gradient(135deg, #1e3a8a, #3b82f6);">
+              <i class="fa-solid fa-calendar-check icon-bg"></i>
+              <div class="small fw-semibold opacity-75">إجمالي الحجوزات المؤكدة</div>
+              <div class="fs-2 fw-bold mt-2" id="kpi-total-bookings">0</div>
+              <div class="small mt-1 opacity-75"><span id="kpi-stay-count">0</span> تسكين | <span id="kpi-hourly-count">0</span> مسابح وسبا</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="kpi-card" style="background: linear-gradient(135deg, #0f766e, #14b8a6);">
+              <i class="fa-solid fa-money-bill-trend-up icon-bg"></i>
+              <div class="small fw-semibold opacity-75">إجمالي الإيرادات التعاقدية</div>
+              <div class="fs-2 fw-bold mt-2" id="kpi-total-revenue">0 <small class="fs-6">ريال</small></div>
+              <div class="small mt-1 opacity-75">شامل الإقامة والخدمات الإضافية</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="kpi-card" style="background: linear-gradient(135deg, #15803d, #22c55e);">
+              <i class="fa-solid fa-wallet icon-bg"></i>
+              <div class="small fw-semibold opacity-75">المبالغ المحصلة (العربونات المسددة)</div>
+              <div class="fs-2 fw-bold mt-2" id="kpi-total-collected">0 <small class="fs-6">ريال</small></div>
+              <div class="small mt-1 opacity-75">نسبة تحصيل لا تقل عن 50%</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="kpi-card" style="background: linear-gradient(135deg, #b45309, #f59e0b);">
+              <i class="fa-solid fa-hand-holding-dollar icon-bg"></i>
+              <div class="small fw-semibold opacity-75">المتبقي للتحصيل عند الوصول</div>
+              <div class="fs-2 fw-bold mt-2" id="kpi-total-remaining">0 <small class="fs-6">ريال</small></div>
+              <div class="small mt-1 opacity-75">مستحق السداد عند الاستقبال</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- جداول تفصيلية للتقارير -->
+        <div class="row g-4">
+          <!-- تقرير إيرادات المحافظ الإلكترونية وطرق الدفع -->
+          <div class="col-lg-6">
+            <div class="card h-100">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fa-solid fa-mobile-screen-button text-primary me-2"></i> تقرير التحصيل حسب المحفظة وطريقة الدفع</span>
+                <span class="badge bg-primary rounded-pill">تقرير مالي</span>
+              </div>
+              <div class="card-body p-0 table-responsive">
+                <table class="table table-hover align-middle mb-0 text-center">
+                  <thead>
+                    <tr>
+                      <th class="text-start ps-3">المحفظة / وسيلة السداد</th>
+                      <th>عدد العمليات</th>
+                      <th>إجمالي المحصل</th>
+                      <th>النسبة من الإجمالي</th>
+                    </tr>
+                  </thead>
+                  <tbody id="payment-report-body">
+                    <!-- تعبئة تلقائية بالجافاسكريبت -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- تقرير أداء وإشغال الوحدات -->
+          <div class="col-lg-6">
+            <div class="card h-100">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fa-solid fa-hotel text-success me-2"></i> تقرير إيرادات وتكرار حجز الوحدات والمرافق</span>
+                <span class="badge bg-success rounded-pill">تقرير تشغيلي</span>
+              </div>
+              <div class="card-body p-0 table-responsive">
+                <table class="table table-hover align-middle mb-0 text-center">
+                  <thead>
+                    <tr>
+                      <th class="text-start ps-3">الوحدة / المرفق</th>
+                      <th>النوع</th>
+                      <th>مرات الحجز</th>
+                      <th>إجمالي الإيراد</th>
+                    </tr>
+                  </thead>
+                  <tbody id="unit-report-body">
+                    <!-- تعبئة تلقائية بالجافاسكريبت -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ========================================== -->
+      <!-- 2. واجهة حجز خدمات التسكين (فترات مبيت بالتواريخ) -->
+      <!-- ========================================== -->
+      <div class="tab-pane fade" id="tab-stay" role="tabpanel">
+        <div class="row g-4 justify-content-center">
+          <div class="col-lg-10">
+            <div class="card">
+              <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between">
+                <span><i class="fa-solid fa-hotel me-2"></i> استمارة حجز وحدات التسكين (غرف عائلية، ثنائية، أجنحة، شقق، شاليهات، غرف عرسان)</span>
+                <span class="badge bg-light text-primary">نظام الإقامة والمبيت</span>
+              </div>
+              <div class="card-body p-4">
+                
+                <div class="rule-box mb-4">
+                  <i class="fa-solid fa-circle-exclamation me-1"></i>
+                  <strong>شروط الحجز الإلزامي:</strong> يلزم تسديد عربون لا يقل عن <strong>50%</strong> من القيمة الإجمالية للحجز لاعتماده، مع إرفاق رقم العملية واسم المحفظة وصورة إشعار التحويل.
+                </div>
+
+                <form id="stayBookingForm">
+                  <!-- بيانات العميل -->
+                  <h6 class="fw-bold text-primary mb-3 border-bottom pb-2"><i class="fa-regular fa-user me-2"></i>بيانات العميل</h6>
+                  <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                      <label class="form-label">الاسم الرباعي للعميل / النزيل <span class="text-danger">*</span></label>
+                      <input type="text" id="stay_guest_name" class="form-control" required placeholder="أدخل اسم الضيف">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">رقم هاتف التواصل / واتساب <span class="text-danger">*</span></label>
+                      <input type="tel" id="stay_guest_phone" class="form-control" required placeholder="مثال: 777123456">
+                    </div>
+                  </div>
+
+                  <!-- بيانات الوحدة والتواريخ -->
+                  <h6 class="fw-bold text-primary mb-3 border-bottom pb-2"><i class="fa-solid fa-door-open me-2"></i>تفاصيل الوحدة وفترة الإقامة</h6>
+                  <div class="row g-3 mb-4">
+                    <div class="col-md-12">
+                      <label class="form-label">نوع ورقم الوحدة السكنية <span class="text-danger">*</span></label>
+                      <select id="stay_unit_id" class="form-select" required></select>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">تاريخ الدخول (من تاريخ) <span class="text-danger">*</span></label>
+                      <input type="date" id="stay_date_from" class="form-control" required>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">تاريخ الخروج (إلى تاريخ) <span class="text-danger">*</span></label>
+                      <input type="date" id="stay_date_to" class="form-control" required>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">مدة الإقامة المحسوبة</label>
+                      <input type="text" id="stay_nights_display" class="form-control bg-light fw-bold text-center text-primary" readonly value="1 ليلة / يوم">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">خدمات إضافية (ضيافة، تزيين إضافي، وجبات) - ريال</label>
+                      <input type="number" id="stay_extra_services" class="form-control" min="0" value="0">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">خصم خاص (ريال)</label>
+                      <input type="number" id="stay_discount" class="form-control" min="0" value="0">
+                    </div>
+                  </div>
+
+                  <!-- الحساب المالي والتحصيل -->
+                  <h6 class="fw-bold text-primary mb-3 border-bottom pb-2"><i class="fa-solid fa-credit-card me-2"></i>الحساب المالي والتحصيل الإلكتروني</h6>
+                  
+                  <div class="row g-3 mb-3 p-3 bg-light rounded-3 align-items-center">
+                    <div class="col-md-4">
+                      <span class="text-muted d-block small">إجمالي قيمة الحجز:</span>
+                      <span class="fs-4 fw-bold text-dark" id="stay_total_amount_lbl">0</span> <small>ريال</small>
+                    </div>
+                    <div class="col-md-4">
+                      <span class="text-danger d-block small fw-bold">الحد الأدنى المطلوب للعربون (50%):</span>
+                      <span class="fs-4 fw-bold text-danger" id="stay_min_deposit_lbl">0</span> <small>ريال</small>
+                    </div>
+                    <div class="col-md-4">
+                      <span class="text-muted d-block small">المتبقي للدفع عند الوصول:</span>
+                      <span class="fs-4 fw-bold text-secondary" id="stay_remaining_lbl">0</span> <small>ريال</small>
+                    </div>
+                  </div>
+
+                  <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                      <label class="form-label">وسيلة الدفع / المحفظة الإلكترونية <span class="text-danger">*</span></label>
+                      <select id="stay_wallet_name" class="form-select" required>
+                        <option value="محفظة جيب (Jeeb)">محفظة جيب (Jeeb)</option>
+                        <option value="محفظتي (Mahfazati)">محفظتي (Mahfazati)</option>
+                        <option value="ون كاش (OneCash)">ون كاش (OneCash)</option>
+                        <option value="محفظة كاش (Cash)">محفظة كاش (Cash)</option>
+                        <option value="محفظة جوالي (Jawali)">محفظة جوالي (Jawali)</option>
+                        <option value="الكريمي إم فلوس (M-Flous)">الكريمي إم فلوس (M-Flous)</option>
+                        <option value="حوالة بنكية / صرافة">حوالة بنكية / صرافة</option>
+                        <option value="نقداً (كاش بالاستقبال)">نقداً (كاش بالاستقبال)</option>
+                      </select>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">رقم العملية / المرجع للتحويل <span class="text-danger">*</span></label>
+                      <input type="text" id="stay_ref_number" class="form-control" required placeholder="رقم إشعار الحوالة">
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">المبلغ المحول / المدفوع (عربون) <span class="text-danger">*</span></label>
+                      <input type="number" id="stay_paid_deposit" class="form-control fw-bold border-success" required min="0" placeholder="يجب أن لا يقل عن 50%">
+                      <div class="text-danger small mt-1 d-none" id="stay_deposit_error">
+                        <i class="fa-solid fa-triangle-exclamation"></i> عذراً، لا يمكن قبول أقل من 50% من قيمة الحجز.
+                      </div>
+                    </div>
+                    <div class="col-md-12">
+                      <label class="form-label">تحميل صورة إشعار التحويل / سند السداد <span class="text-danger">*</span></label>
+                      <input type="file" id="stay_receipt_file" class="form-control" accept="image/*" required>
+                      <div class="mt-2 text-center">
+                        <img id="stay_img_preview" class="img-preview mx-auto" alt="معاينة إشعار التحويل">
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="text-end">
+                    <button type="submit" class="btn btn-primary btn-lg px-5 shadow">
+                      <i class="fa-solid fa-check-double me-2"></i> تأكيد وحفظ حجز التسكين
+                    </button>
+                  </div>
+                </form>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- 3. واجهة حجز المسابح العائلية والنادي الصحي (بالساعة) -->
+      <!-- ========================================== -->
+      <div class="tab-pane fade" id="tab-facility" role="tabpanel">
+        <div class="row g-4 justify-content-center">
+          <div class="col-lg-10">
+            <div class="card">
+              <div class="card-header bg-info text-white d-flex align-items-center justify-content-between">
+                <span><i class="fa-solid fa-water-ladder me-2"></i> استمارة حجز المسابح العائلية المغلقة والمكيفة والنادي الصحي (بالساعة)</span>
+                <span class="badge bg-light text-dark">تأجير بالساعات</span>
+              </div>
+              <div class="card-body p-4">
+
+                <div class="rule-box mb-4">
+                  <i class="fa-solid fa-circle-exclamation me-1"></i>
+                  <strong>ضوابط الحجز بالساعة:</strong> المسابح A و B و C والنادي الصحي تؤجر بالساعات مع خصوصية تامة للعائلات، مع اشتراط سداد <strong>50%</strong> عربون مقدماً عبر المحافظ الإلكترونية أو التحويل البنكي وتأكيد رقم العملية.
+                </div>
+
+                <form id="facilityBookingForm">
+                  <!-- بيانات العميل -->
+                  <h6 class="fw-bold text-info mb-3 border-bottom pb-2"><i class="fa-regular fa-user me-2"></i>بيانات العميل</h6>
+                  <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                      <label class="form-label">الاسم الكامل للعميل / العائلة <span class="text-danger">*</span></label>
+                      <input type="text" id="fac_guest_name" class="form-control" required placeholder="اسم حاجز المسبح/النادي">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">رقم الهاتف للتواصل <span class="text-danger">*</span></label>
+                      <input type="tel" id="fac_guest_phone" class="form-control" required placeholder="777000000">
+                    </div>
+                  </div>
+
+                  <!-- المرفق والوقت بالساعة -->
+                  <h6 class="fw-bold text-info mb-3 border-bottom pb-2"><i class="fa-regular fa-clock me-2"></i>تحديد المرفق وساعات الحجز</h6>
+                  <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                      <label class="form-label">المرفق الترفيهي المطلوب <span class="text-danger">*</span></label>
+                      <select id="fac_unit_id" class="form-select" required></select>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label">تاريخ الحجز <span class="text-danger">*</span></label>
+                      <input type="date" id="fac_date" class="form-control" required>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">وقت بدء الفترة <span class="text-danger">*</span></label>
+                      <input type="time" id="fac_time_from" class="form-control" required value="16:00">
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">عدد الساعات المطلوبة <span class="text-danger">*</span></label>
+                      <input type="number" id="fac_hours" class="form-control" min="1" max="12" value="2" required>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">وقت الانتهاء المتوقع</label>
+                      <input type="text" id="fac_time_to_display" class="form-control bg-light text-center fw-bold" readonly value="18:00">
+                    </div>
+                  </div>
+
+                  <!-- الحساب المالي والتحصيل -->
+                  <h6 class="fw-bold text-info mb-3 border-bottom pb-2"><i class="fa-solid fa-money-check-dollar me-2"></i>البيانات المالية والتحويل</h6>
+
+                  <div class="row g-3 mb-3 p-3 bg-light rounded-3 align-items-center">
+                    <div class="col-md-4">
+                      <span class="text-muted d-block small">إجمالي قيمة الساعات:</span>
+                      <span class="fs-4 fw-bold text-dark" id="fac_total_amount_lbl">0</span> <small>ريال</small>
+                    </div>
+                    <div class="col-md-4">
+                      <span class="text-danger d-block small fw-bold">عربون الـ 50% الإلزامي:</span>
+                      <span class="fs-4 fw-bold text-danger" id="fac_min_deposit_lbl">0</span> <small>ريال</small>
+                    </div>
+                    <div class="col-md-4">
+                      <span class="text-muted d-block small">المتبقي للدفع قبل الدخول:</span>
+                      <span class="fs-4 fw-bold text-secondary" id="fac_remaining_lbl">0</span> <small>ريال</small>
+                    </div>
+                  </div>
+
+                  <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                      <label class="form-label">المحفظة الإلكترونية المستخدمة <span class="text-danger">*</span></label>
+                      <select id="fac_wallet_name" class="form-select" required>
+                        <option value="محفظة جيب (Jeeb)">محفظة جيب (Jeeb)</option>
+                        <option value="محفظتي (Mahfazati)">محفظتي (Mahfazati)</option>
+                        <option value="ون كاش (OneCash)">ون كاش (OneCash)</option>
+                        <option value="محفظة كاش (Cash)">محفظة كاش (Cash)</option>
+                        <option value="محفظة جوالي (Jawali)">محفظة جوالي (Jawali)</option>
+                        <option value="الكريمي إم فلوس (M-Flous)">الكريمي إم فلوس (M-Flous)</option>
+                        <option value="حوالة بنكية / صرافة">حوالة بنكية / صرافة</option>
+                        <option value="نقداً (كاش بالاستقبال)">نقداً (كاش بالاستقبال)</option>
+                      </select>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">رقم العملية المرجعي <span class="text-danger">*</span></label>
+                      <input type="text" id="fac_ref_number" class="form-control" required placeholder="رقم إشعار الحوالة">
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">المبلغ المحول فعلياً <span class="text-danger">*</span></label>
+                      <input type="number" id="fac_paid_deposit" class="form-control fw-bold border-success" required min="0" placeholder="50% على الأقل">
+                      <div class="text-danger small mt-1 d-none" id="fac_deposit_error">
+                        <i class="fa-solid fa-triangle-exclamation"></i> لا يمكن قبول أقل من 50% من قيمة الحجز.
+                      </div>
+                    </div>
+                    <div class="col-md-12">
+                      <label class="form-label">تحميل صورة إشعار التحويل <span class="text-danger">*</span></label>
+                      <input type="file" id="fac_receipt_file" class="form-control" accept="image/*" required>
+                      <div class="mt-2 text-center">
+                        <img id="fac_img_preview" class="img-preview mx-auto" alt="معاينة إشعار التحويل">
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="text-end">
+                    <button type="submit" class="btn btn-info text-white btn-lg px-5 shadow">
+                      <i class="fa-solid fa-check-double me-2"></i> تأكيد حجز المرفق بالساعة
+                    </button>
+                  </div>
+                </form>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- 4. سجل الحجوزات وسندات التحويل المرفقة -->
+      <!-- ========================================== -->
+      <div class="tab-pane fade" id="tab-ledger" role="tabpanel">
+        <div class="card">
+          <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+              <i class="fa-solid fa-book-open-reader text-warning fs-5 me-2"></i>
+              <span class="fs-5 fw-bold">سجل الحجوزات المؤكدة والسندات المالية</span>
+            </div>
+            <div class="d-flex gap-2">
+              <input type="text" id="searchTable" class="form-control form-control-sm" placeholder="بحث باسم العميل، الهاتف، أو رقم العملية...">
+              <button class="btn btn-outline-danger btn-sm" onclick="clearAllData()">
+                <i class="fa-solid fa-trash-can me-1"></i> مسح السجل
+              </button>
+            </div>
+          </div>
+          <div class="card-body p-0 table-responsive">
+            <table class="table table-hover align-middle mb-0 text-center" style="font-size: 0.88rem;">
+              <thead>
+                <tr>
+                  <th>رقم الحجز</th>
+                  <th>العميل</th>
+                  <th>الهاتف</th>
+                  <th>الوحدة / المرفق</th>
+                  <th>الفترة / التاريخ</th>
+                  <th>المحفظة / الوسيلة</th>
+                  <th>رقم العملية المرجعي</th>
+                  <th>الإجمالي</th>
+                  <th>المدفوع (العربون)</th>
+                  <th>المتبقي</th>
+                  <th>صورة الإشعار</th>
+                  <th>الحالة</th>
+                </tr>
+              </thead>
+              <tbody id="bookingsLedgerBody">
+                <!-- تعبئة تلقائية -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- 5. دليل الوحدات والأسعار -->
+      <!-- ========================================== -->
+      <div class="tab-pane fade" id="tab-units" role="tabpanel">
+        <div class="card">
+          <div class="card-header bg-white">
+            <i class="fa-solid fa-list-check text-secondary me-2"></i>
+            <span class="fs-5 fw-bold">دليل الغرف، الشقق، الشاليهات، والمسابح بالساعة المعتمدة</span>
+          </div>
+          <div class="card-body p-0 table-responsive">
+            <table class="table table-striped align-middle mb-0">
+              <thead class="table-light text-center">
+                <tr>
+                  <th>رمز الوحدة</th>
+                  <th>اسم الوحدة / المرفق</th>
+                  <th>طبيعة الحجز</th>
+                  <th>السعة</th>
+                  <th>السعر الرسمي</th>
+                  <th>المواصفات والخدمات المشمولة</th>
+                </tr>
+              </thead>
+              <tbody id="unitsTableBody">
+                <!-- تعبئة من مصفوفة البيانات -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal معاينة صورة الإشعار -->
+  <div class="modal fade" id="receiptModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h6 class="modal-title fw-bold" id="receiptModalTitle">صورة إشعار التحويل البنكي</h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body text-center p-3">
+          <img id="modalReceiptImg" src="" alt="إشعار التحويل" class="img-fluid rounded shadow-sm" style="max-height: 480px;">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- تطبيق الجافاسكريبت التشغيلي الكامل -->
+  <script>
+    // ==========================================
+    // 1. قاعدة بيانات الوحدات والمرافق
+    // ==========================================
+    const resortUnits = [
+      // وحدات التسكين (مبيت يومي)
+      { id: "FAM-101", name: "غرفة عائلية 101", category: "غرفة عائلية", type: "stay", price: 35000, capacity: "4 أفراد", desc: "سرير عائلي مزدوج مع حمام داخلي مستقل ومطل على الحديقة" },
+      { id: "FAM-102", name: "غرفة عائلية 102", category: "غرفة عائلية", type: "stay", price: 35000, capacity: "4 أفراد", desc: "سرير عائلي مزدوج مع حمام داخلي وإطلالة على الحديقة والمسطحات الخضراء" },
+      { id: "TWN-201", name: "غرفة ثنائية 201", category: "غرفة سريرين منفصلين", type: "stay", price: 25000, capacity: "2 أفراد", desc: "سريران منفصلان مع حمام داخلي وتكييف متكامل" },
+      { id: "TWN-202", name: "غرفة ثنائية 202", category: "غرفة سريرين منفصلين", type: "stay", price: 25000, capacity: "2 أفراد", desc: "سريران منفصلان مع حمام داخلي وتكييف متكامل" },
+      { id: "STE-301", name: "جناح عائلي 301", category: "جناح غرفتين وحمام", type: "stay", price: 50000, capacity: "5 أفراد", desc: "مكون من غرفتين نوم مستقلتين مع دورة مياه وتجهيزات فندقية" },
+      { id: "STE-401", name: "جناح VIP 401", category: "جناح مجلس وغرفة نوم وحمام", type: "stay", price: 60000, capacity: "4 أفراد", desc: "مكون من مجلس ضيوف عربي واسع + غرفة نوم رئيسية + حمام فخم" },
+      { id: "APT-501", name: "شقة مفروشة 501", category: "شقة متكاملة", type: "stay", price: 80000, capacity: "7 أفراد", desc: "مكونة من غرفتين وحمام ومطبخ متكامل التجهيز ومجلس مستقل" },
+      { id: "BRD-01",  name: "جناح العرائس الملكي", category: "غرفة عرسان وتزيين", type: "stay", price: 75000, capacity: "2 أفراد", desc: "حجز غرفة عرسان ملكية فاخرة مع باقة التزيين بالورود والإضاءة والضيافة" },
+      { id: "CHL-ROYAL", name: "الشاليه الملكي", category: "شاليه ملكي", type: "stay", price: 130000, capacity: "10 أفراد", desc: "شاليه ملكي فاخر، خصوصية تامة مع حديقة وجلسات خارجية ومرافق متطورة" },
+      { id: "CHL-DLX",   name: "الشاليه الديلوكس", category: "شاليه ديلوكس", type: "stay", price: 100000, capacity: "8 أفراد", desc: "شاليه ديلوكس راقي، تشطيب فخم وتجهيز عائلي متكامل" },
+      
+      // المرافق بالساعة
+      { id: "POOL-A", name: "مسبح عائلي مغلق ومكيف (A)", category: "مسبح عائلي", type: "facility", price: 15000, capacity: "8 أفراد", desc: "مسبح مغلق بالكامل ومكيف، خصوصية عائلية تامة، يؤجر بالساعات" },
+      { id: "POOL-B", name: "مسبح عائلي مغلق ومكيف (B)", category: "مسبح عائلي", type: "facility", price: 15000, capacity: "8 أفراد", desc: "مسبح مغلق بالكامل ومكيف، عمق متدرج، خصوصية عائلية تامة" },
+      { id: "POOL-C", name: "مسبح عائلي مغلق ومكيف (C)", category: "مسبح عائلي", type: "facility", price: 15000, capacity: "8 أفراد", desc: "مسبح مغلق بالكامل ومكيف مخصص للعائلات بنظام الساعات" },
+      { id: "SPA-CLUB", name: "النادي الصحي المتكامل", category: "نادي صحي وسبا", type: "facility", price: 25000, capacity: "10 أفراد", desc: "حجز النادي الصحي: استخدام المسبح مع جلسات البخار والساونا وغرف الاسترخاء" }
+    ];
+
+    // استرجاع الحجوزات من التخزين المحلي (LocalStorage) أو بيانات ابتدائية نموذجية
+    let bookingsStore = JSON.parse(localStorage.getItem("alwaha_bookings_v2")) || [
+      {
+        id: "BK-8012",
+        type: "stay",
+        guest: "د. فؤاد عبدالكريم",
+        phone: "773344556",
+        unitId: "BRD-01",
+        unitName: "جناح العرائس الملكي",
+        periodText: "من 2026-11-02 إلى 2026-11-04 (2 ليلة)",
+        wallet: "ون كاش (OneCash)",
+        refNumber: "TRX-9988231",
+        total: 150000,
+        paid: 80000,
+        remaining: 70000,
+        receiptImg: "https://placehold.co/400x300/1e3a8a/white?text=OneCash+TRX-9988231",
+        date: "2026-10-29"
+      },
+      {
+        id: "BK-8013",
+        type: "facility",
+        guest: "طارق يحيى مصلح",
+        phone: "734567890",
+        unitId: "POOL-A",
+        unitName: "مسبح عائلي مغلق ومكيف (A)",
+        periodText: "2026-11-01 (16:00 - 19:00 | 3 ساعات)",
+        wallet: "محفظة جيب (Jeeb)",
+        refNumber: "JB-776251",
+        total: 45000,
+        paid: 30000,
+        remaining: 15000,
+        receiptImg: "https://placehold.co/400x300/0d9488/white?text=Jeeb+JB-776251",
+        date: "2026-10-29"
+      }
+    ];
+
+    function saveBookingsToStorage() {
+      localStorage.setItem("alwaha_bookings_v2", JSON.stringify(bookingsStore));
+    }
+
+    // ==========================================
+    // 2. تعبئة القوائم وجدول الوحدات
+    // ==========================================
+    function initUnitsView() {
+      const staySelect = document.getElementById("stay_unit_id");
+      const facSelect = document.getElementById("fac_unit_id");
+      const unitsTbody = document.getElementById("unitsTableBody");
+
+      staySelect.innerHTML = "";
+      facSelect.innerHTML = "";
+      unitsTbody.innerHTML = "";
+
+      resortUnits.forEach(u => {
+        let opt = document.createElement("option");
+        opt.value = u.id;
+        opt.textContent = `${u.name} - [${u.price.toLocaleString()} ريال / ${u.type === 'stay' ? 'يوم' : 'ساعة'}]`;
+
+        if (u.type === "stay") {
+          staySelect.appendChild(opt);
+        } else {
+          facSelect.appendChild(opt);
+        }
+
+        let tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="text-center fw-bold text-primary">${u.id}</td>
+          <td class="fw-semibold">${u.name}</td>
+          <td class="text-center"><span class="badge ${u.type === 'stay' ? 'bg-primary' : 'bg-info text-dark'}">${u.type === 'stay' ? 'مبيت يومي' : 'بالساعة'}</span></td>
+          <td class="text-center">${u.capacity}</td>
+          <td class="text-center fw-bold text-success">${u.price.toLocaleString()} ريال</td>
+          <td><small class="text-muted">${u.desc}</small></td>
+        `;
+        unitsTbody.appendChild(tr);
+      });
+    }
+
+    // ضبط التواريخ الافتراضية
+    function initDefaultDates() {
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      const formatDate = d => d.toISOString().split("T")[0];
+
+      document.getElementById("stay_date_from").value = formatDate(today);
+      document.getElementById("stay_date_to").value = formatDate(tomorrow);
+      document.getElementById("stay_date_from").min = formatDate(today);
+      document.getElementById("stay_date_to").min = formatDate(today);
+
+      document.getElementById("fac_date").value = formatDate(today);
+      document.getElementById("fac_date").min = formatDate(today);
+    }
+
+    // ==========================================
+    // 3. احتساب تكلفة التسكين وقاعدة الـ 50%
+    // ==========================================
+    function calculateStayFinancials() {
+      const unitId = document.getElementById("stay_unit_id").value;
+      const unit = resortUnits.find(u => u.id === unitId) || resortUnits[0];
+
+      const d1 = new Date(document.getElementById("stay_date_from").value);
+      const d2 = new Date(document.getElementById("stay_date_to").value);
+
+      let diffDays = 1;
+      if (d2 > d1) {
+        diffDays = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+      } else {
+        diffDays = 1;
+      }
+      document.getElementById("stay_nights_display").value = `${diffDays} ليلة / أيام`;
+
+      const extra = parseFloat(document.getElementById("stay_extra_services").value) || 0;
+      const discount = parseFloat(document.getElementById("stay_discount").value) || 0;
+      const total = (unit.price * diffDays) + extra - discount;
+
+      const minDeposit = Math.ceil(total * 0.50); // قاعدة 50% كحد أدنى
+      const paid = parseFloat(document.getElementById("stay_paid_deposit").value) || 0;
+      const remaining = Math.max(0, total - paid);
+
+      document.getElementById("stay_total_amount_lbl").textContent = total.toLocaleString();
+      document.getElementById("stay_min_deposit_lbl").textContent = minDeposit.toLocaleString();
+      document.getElementById("stay_remaining_lbl").textContent = remaining.toLocaleString();
+
+      const depositErr = document.getElementById("stay_deposit_error");
+      if (paid > 0 && paid < minDeposit) {
+        depositErr.classList.remove("d-none");
+      } else {
+        depositErr.classList.add("d-none");
+      }
+
+      return { total, minDeposit, paid, remaining, diffDays, unit };
+    }
+
+    // ==========================================
+    // 4. احتساب تكلفة المرافق بالساعة وقاعدة الـ 50%
+    // ==========================================
+    function calculateFacilityFinancials() {
+      const unitId = document.getElementById("fac_unit_id").value;
+      const unit = resortUnits.find(u => u.id === unitId) || resortUnits[10];
+
+      const hours = parseInt(document.getElementById("fac_hours").value) || 1;
+      const timeFrom = document.getElementById("fac_time_from").value || "16:00";
+
+      let [h, m] = timeFrom.split(":").map(Number);
+      let endH = (h + hours) % 24;
+      let pad = n => n.toString().padStart(2, '0');
+      document.getElementById("fac_time_to_display").value = `${pad(endH)}:${pad(m)}`;
+
+      const total = unit.price * hours;
+      const minDeposit = Math.ceil(total * 0.50);
+      const paid = parseFloat(document.getElementById("fac_paid_deposit").value) || 0;
+      const remaining = Math.max(0, total - paid);
+
+      document.getElementById("fac_total_amount_lbl").textContent = total.toLocaleString();
+      document.getElementById("fac_min_deposit_lbl").textContent = minDeposit.toLocaleString();
+      document.getElementById("fac_remaining_lbl").textContent = remaining.toLocaleString();
+
+      const depositErr = document.getElementById("fac_deposit_error");
+      if (paid > 0 && paid < minDeposit) {
+        depositErr.classList.remove("d-none");
+      } else {
+        depositErr.classList.add("d-none");
+      }
+
+      return { total, minDeposit, paid, remaining, hours, unit };
+    }
+
+    ["stay_unit_id", "stay_date_from", "stay_date_to", "stay_extra_services", "stay_discount", "stay_paid_deposit"].forEach(id => {
+      document.getElementById(id).addEventListener("input", calculateStayFinancials);
+      document.getElementById(id).addEventListener("change", calculateStayFinancials);
+    });
+
+    ["fac_unit_id", "fac_hours", "fac_time_from", "fac_paid_deposit"].forEach(id => {
+      document.getElementById(id).addEventListener("input", calculateFacilityFinancials);
+      document.getElementById(id).addEventListener("change", calculateFacilityFinancials);
+    });
+
+    function setupImagePreview(inputId, previewId) {
+      document.getElementById(inputId).addEventListener("change", function(e) {
+        const file = e.target.files[0];
+        const preview = document.getElementById(previewId);
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function(evt) {
+            preview.src = evt.target.result;
+            preview.style.display = "block";
+          };
+          reader.readAsDataURL(file);
+        } else {
+          preview.style.display = "none";
+        }
+      });
+    }
+    setupImagePreview("stay_receipt_file", "stay_img_preview");
+    setupImagePreview("fac_receipt_file", "fac_img_preview");
+
+    // ==========================================
+    // 5. إرسال وتأكيد حجز التسكين
+    // ==========================================
+    document.getElementById("stayBookingForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const fin = calculateStayFinancials();
+
+      if (fin.paid < fin.minDeposit) {
+        alert(`عذراً! لا يمكن تأكيد الحجز لأن المبلغ المدفوع (${fin.paid.toLocaleString()} ريال) أقل من الحد الأدنى للعربون المطلوب (50% = ${fin.minDeposit.toLocaleString()} ريال).`);
+        document.getElementById("stay_paid_deposit").focus();
+        return;
+      }
+
+      const receiptImg = document.getElementById("stay_img_preview").src || "https://placehold.co/400x300/1e3a8a/white?text=No+Image";
+      const newBooking = {
+        id: "STAY-" + Math.floor(1000 + Math.random() * 9000),
+        type: "stay",
+        guest: document.getElementById("stay_guest_name").value,
+        phone: document.getElementById("stay_guest_phone").value,
+        unitId: fin.unit.id,
+        unitName: fin.unit.name,
+        periodText: `من ${document.getElementById("stay_date_from").value} إلى ${document.getElementById("stay_date_to").value} (${fin.diffDays} ليلة)`,
+        wallet: document.getElementById("stay_wallet_name").value,
+        refNumber: document.getElementById("stay_ref_number").value,
+        total: fin.total,
+        paid: fin.paid,
+        remaining: fin.remaining,
+        receiptImg: receiptImg,
+        date: new Date().toISOString().split("T")[0]
+      };
+
+      bookingsStore.unshift(newBooking);
+      saveBookingsToStorage();
+      alert(`✓ تم تأكيد وحفظ حجز التسكين بنجاح!\nرقم الحجز: ${newBooking.id}\nالضيف: ${newBooking.guest}\nالعربون المسدد: ${newBooking.paid.toLocaleString()} ريال بنجاح.`);
+      
+      this.reset();
+      document.getElementById("stay_img_preview").style.display = "none";
+      initDefaultDates();
+      calculateStayFinancials();
+      updateAllViews();
+
+      const ledgerTab = new bootstrap.Tab(document.getElementById("ledger-tab"));
+      ledgerTab.show();
+    });
+
+    // ==========================================
+    // 6. إرسال وتأكيد حجز المرافق بالساعة
+    // ==========================================
+    document.getElementById("facilityBookingForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const fin = calculateFacilityFinancials();
+
+      if (fin.paid < fin.minDeposit) {
+        alert(`عذراً! يلزم سداد 50% على الأقل لتأكيد حجز المرفق بالساعة.\nالحد الأدنى للعربون: ${fin.minDeposit.toLocaleString()} ريال.\nالمبلغ المدخل: ${fin.paid.toLocaleString()} ريال.`);
+        document.getElementById("fac_paid_deposit").focus();
+        return;
+      }
+
+      const receiptImg = document.getElementById("fac_img_preview").src || "https://placehold.co/400x300/0d9488/white?text=No+Image";
+      const timeTo = document.getElementById("fac_time_to_display").value;
+      const newBooking = {
+        id: "FAC-" + Math.floor(1000 + Math.random() * 9000),
+        type: "facility",
+        guest: document.getElementById("fac_guest_name").value,
+        phone: document.getElementById("fac_guest_phone").value,
+        unitId: fin.unit.id,
+        unitName: fin.unit.name,
+        periodText: `${document.getElementById("fac_date").value} (${document.getElementById("fac_time_from").value} إلى ${timeTo} | ${fin.hours} ساعة)`,
+        wallet: document.getElementById("fac_wallet_name").value,
+        refNumber: document.getElementById("fac_ref_number").value,
+        total: fin.total,
+        paid: fin.paid,
+        remaining: fin.remaining,
+        receiptImg: receiptImg,
+        date: new Date().toISOString().split("T")[0]
+      };
+
+      bookingsStore.unshift(newBooking);
+      saveBookingsToStorage();
+      alert(`✓ تم تسجيل حجز المرفق بالساعة بنجاح!\nرقم الحجز: ${newBooking.id}\nالضيف: ${newBooking.guest}\nالعربون المقبوض: ${newBooking.paid.toLocaleString()} ريال.`);
+
+      this.reset();
+      document.getElementById("fac_img_preview").style.display = "none";
+      initDefaultDates();
+      calculateFacilityFinancials();
+      updateAllViews();
+
+      const ledgerTab = new bootstrap.Tab(document.getElementById("ledger-tab"));
+      ledgerTab.show();
+    });
+
+    // ==========================================
+    // 7. تحديث لوحة المؤشرات، التقارير، وسجل الحجوزات
+    // ==========================================
+    function updateAllViews() {
+      const totalCount = bookingsStore.length;
+      let totalRev = 0;
+      let totalPaid = 0;
+      let totalRemaining = 0;
+      let stayCount = 0;
+      let facCount = 0;
+
+      const walletStats = {};
+      const unitStats = {};
+
+      bookingsStore.forEach(b => {
+        totalRev += b.total;
+        totalPaid += b.paid;
+        totalRemaining += b.remaining;
+        if (b.type === "stay") stayCount++; else facCount++;
+
+        if (!walletStats[b.wallet]) {
+          walletStats[b.wallet] = { count: 0, total: 0 };
+        }
+        walletStats[b.wallet].count += 1;
+        walletStats[b.wallet].total += b.paid;
+
+        if (!unitStats[b.unitName]) {
+          unitStats[b.unitName] = { count: 0, total: 0, type: b.type };
+        }
+        unitStats[b.unitName].count += 1;
+        unitStats[b.unitName].total += b.total;
+      });
+
+      document.getElementById("kpi-total-bookings").textContent = totalCount;
+      document.getElementById("kpi-stay-count").textContent = stayCount;
+      document.getElementById("kpi-hourly-count").textContent = facCount;
+      document.getElementById("kpi-total-revenue").innerHTML = `${totalRev.toLocaleString()} <small class="fs-6">ريال</small>`;
+      document.getElementById("kpi-total-collected").innerHTML = `${totalPaid.toLocaleString()} <small class="fs-6">ريال</small>`;
+      document.getElementById("kpi-total-remaining").innerHTML = `${totalRemaining.toLocaleString()} <small class="fs-6">ريال</small>`;
+
+      const payTbody = document.getElementById("payment-report-body");
+      payTbody.innerHTML = "";
+      for (const [wallet, data] of Object.entries(walletStats)) {
+        const pct = totalPaid > 0 ? ((data.total / totalPaid) * 100).toFixed(1) : 0;
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="text-start ps-3 fw-semibold"><i class="fa-solid fa-money-check text-muted me-2"></i>${wallet}</td>
+          <td><span class="badge bg-secondary">${data.count}</span></td>
+          <td class="fw-bold text-success">${data.total.toLocaleString()} ريال</td>
+          <td>
+            <div class="d-flex align-items-center justify-content-center gap-2">
+              <span class="small">${pct}%</span>
+              <div class="progress flex-grow-1" style="height: 6px; max-width: 80px;">
+                <div class="progress-bar bg-success" style="width: ${pct}%"></div>
+              </div>
+            </div>
+          </td>
+        `;
+        payTbody.appendChild(tr);
+      }
+      if (Object.keys(walletStats).length === 0) {
+        payTbody.innerHTML = `<tr><td colspan="4" class="text-muted py-3">لا توجد عمليات تحصيل مسجلة بعد</td></tr>`;
+      }
+
+      const unitTbody = document.getElementById("unit-report-body");
+      unitTbody.innerHTML = "";
+      for (const [uName, data] of Object.entries(unitStats)) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="text-start ps-3 fw-semibold">${uName}</td>
+          <td><span class="badge ${data.type === 'stay' ? 'bg-primary' : 'bg-info text-dark'}">${data.type === 'stay' ? 'تسكين' : 'بالساعة'}</span></td>
+          <td class="fw-bold">${data.count}</td>
+          <td class="fw-bold text-primary">${data.total.toLocaleString()} ريال</td>
+        `;
+        unitTbody.appendChild(tr);
+      }
+      if (Object.keys(unitStats).length === 0) {
+        unitTbody.innerHTML = `<tr><td colspan="4" class="text-muted py-3">لا توجد بيانات إشغال مسجلة بعد</td></tr>`;
+      }
+
+      renderLedgerTable(bookingsStore);
+    }
+
+    function renderLedgerTable(dataList) {
+      const tbody = document.getElementById("bookingsLedgerBody");
+      tbody.innerHTML = "";
+
+      if (dataList.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="12" class="text-muted py-4">السجل فارغ، لا توجد حجوزات مسجلة</td></tr>`;
+        return;
+      }
+
+      dataList.forEach(b => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="fw-bold text-primary">${b.id}</td>
+          <td class="fw-semibold">${b.guest}</td>
+          <td class="text-muted">${b.phone}</td>
+          <td><span class="badge ${b.type === 'stay' ? 'bg-primary' : 'bg-info text-dark'}">${b.unitName}</span></td>
+          <td class="small">${b.periodText}</td>
+          <td><span class="badge bg-light text-dark border">${b.wallet}</span></td>
+          <td class="fw-bold font-monospace text-secondary">${b.refNumber}</td>
+          <td class="fw-bold">${b.total.toLocaleString()}</td>
+          <td class="fw-bold text-success">${b.paid.toLocaleString()}</td>
+          <td class="fw-bold text-danger">${b.remaining.toLocaleString()}</td>
+          <td>
+            <button class="btn btn-outline-primary btn-sm py-0 px-2" onclick="viewReceipt('${b.receiptImg}', '${b.id} - ${b.guest}')">
+              <i class="fa-regular fa-image me-1"></i> عرض
+            </button>
+          </td>
+          <td>
+            <span class="badge badge-status ${b.remaining === 0 ? 'bg-success' : 'bg-warning text-dark'}">
+              ${b.remaining === 0 ? 'مسدد بالكامل' : 'عربون مؤكد'}
+            </span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    window.viewReceipt = function(imgSrc, title) {
+      document.getElementById("modalReceiptImg").src = imgSrc;
+      document.getElementById("receiptModalTitle").innerText = `إشعار التحويل: ${title}`;
+      const modal = new bootstrap.Modal(document.getElementById("receiptModal"));
+      modal.show();
+    };
+
+    document.getElementById("searchTable").addEventListener("input", function(e) {
+      const val = e.target.value.toLowerCase().trim();
+      const filtered = bookingsStore.filter(b => 
+        b.guest.toLowerCase().includes(val) ||
+        b.phone.includes(val) ||
+        b.refNumber.toLowerCase().includes(val) ||
+        b.id.toLowerCase().includes(val) ||
+        b.unitName.toLowerCase().includes(val)
+      );
+      renderLedgerTable(filtered);
+    });
+
+    window.clearAllData = function() {
+      if (confirm("هل أنت متأكد من رغبتك في مسح كافة الحجوزات والبيانات المسجلة؟")) {
+        bookingsStore = [];
+        saveBookingsToStorage();
+        updateAllViews();
+      }
+    };
+
+    document.addEventListener("DOMContentLoaded", function() {
+      initUnitsView();
+      initDefaultDates();
+      calculateStayFinancials();
+      calculateFacilityFinancials();
+      updateAllViews();
+    });
+  </script>
+</body>
+</html>
