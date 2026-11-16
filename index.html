@@ -1,173 +1,3 @@
-import os
-import json
-import uuid
-import sqlite3
-from datetime import datetime
-from flask import Flask, request, jsonify, render_template_string, send_from_directory
-from werkzeug.utils import secure_filename
-
-app = Flask(__name__)
-
-# =========================================================
-# 1. الإعدادات والثوابت والكتالوج
-# =========================================================
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "alwathiq.db")
-UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "pdf"}
-WALLETS = ["جيب", "كريمي", "محفظتي", "ون كاش"]
-MIN_TRANSFER_FEE = 3000
-
-CATALOG = {
-    "القسم الأول: الهندسة والبناء والصيانة المنزلية": [
-        "استشارة هندسية في التخطيط والإسقاط",
-        "مهندسون أكفاء",
-        "مشرفو مواقع البناء",
-        "حراسة أمنية لموقع البناء",
-        "فني بلاط",
-        "فني سباكة",
-        "فني تمديدات",
-        "فني تكييف وتبريد",
-        "مهندس كهرباء إنشائي",
-        "فني كهرباء تمديدات",
-        "صيانة كهربائية",
-        "مهندس ستلايت",
-        "فني ديكور",
-        "فني نجارة",
-    ],
-    "القسم الثاني: استشارات أسرية": [
-        "البول الليلي",
-        "الهلوسة الليلية",
-        "الاتكالية",
-        "الانطوائية",
-        "تأخر في النمو",
-        "استشارات أسرية",
-        "لغة الإشارة",
-    ],
-    "القسم الثالث: طلبات تعليمية": [
-        "معلمون",
-        "مربيين",
-        "مربيات",
-        "معلمون مواد تخصصية",
-        "معلمون رسم",
-    ],
-    "القسم الرابع: طلبات توظيف": [
-        "شركات - إداريون",
-        "شركات - مهندسون",
-        "شركات - عمال نظافة",
-        "شركات - متعهد خدمات",
-        "تسجيل متقدمين للحصول على الوظيفة",
-    ],
-    "قسم أخرى: إعلانات وظائف ودعم فني": [
-        "إعلان عن فرص توظيف",
-        "طلب الدعم الفني",
-    ],
-}
-
-
-# =========================================================
-# 2. قاعدة البيانات (SQLite) ودوال المساعدة
-# =========================================================
-def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-def init_db():
-    with get_db() as conn:
-        conn.executescript(
-            """
-            CREATE TABLE IF NOT EXISTS service_requests (
-                id TEXT PRIMARY KEY,
-                created_at TEXT NOT NULL,
-                client_name TEXT NOT NULL,
-                phone TEXT NOT NULL,
-                service TEXT NOT NULL,
-                location TEXT NOT NULL,
-                schedule TEXT NOT NULL,
-                problem TEXT,
-                wallet TEXT NOT NULL,
-                transfer_fee REAL NOT NULL,
-                transfer_receipt TEXT NOT NULL,
-                dispatch_status TEXT NOT NULL,
-                engineer_name TEXT,
-                diagnosis TEXT,
-                inspection_at TEXT,
-                service_cost REAL,
-                service_wallet TEXT,
-                service_receipt TEXT,
-                service_paid_at TEXT,
-                status TEXT NOT NULL
-            );
-
-            CREATE TABLE IF NOT EXISTS other_requests (
-                id TEXT PRIMARY KEY,
-                created_at TEXT NOT NULL,
-                category_group TEXT NOT NULL,
-                section_service TEXT NOT NULL,
-                name TEXT NOT NULL,
-                phone TEXT NOT NULL,
-                details TEXT NOT NULL
-            );
-
-            CREATE TABLE IF NOT EXISTS job_ads (
-                id TEXT PRIMARY KEY,
-                created_at TEXT NOT NULL,
-                title TEXT NOT NULL,
-                details TEXT NOT NULL
-            );
-            """
-        )
-        cur = conn.execute("SELECT COUNT(*) AS cnt FROM job_ads")
-        if cur.fetchone()["cnt"] == 0:
-            now = datetime.now().isoformat(timespec="seconds")
-            conn.executemany(
-                "INSERT INTO job_ads (id, created_at, title, details) VALUES (?, ?, ?, ?)",
-                [
-                    ("JOB-1", now, "مهندس موقع", "مطلوب مهندس إشراف لمشروع سكني - دوام كامل"),
-                    ("JOB-2", now, "فني سباكة وتمديدات", "خبرة عملية مع فريق الواثق للاستجابة السريعة"),
-                ],
-            )
-
-
-def allowed_file(filename):
-    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
-
-
-def save_uploaded_receipt(file_obj, prefix):
-    if not file_obj or not file_obj.filename:
-        return None
-    clean_name = secure_filename(file_obj.filename)
-    ext = clean_name.rsplit(".", 1)[1].lower() if "." in clean_name else "jpg"
-    if ext not in ALLOWED_EXTENSIONS:
-        raise ValueError("صيغة الملف غير مدعومة. استخدم: png, jpg, jpeg, webp, pdf")
-    stored_name = f"{prefix}_{uuid.uuid4().hex[:8]}.{ext}"
-    file_obj.save(os.path.join(UPLOAD_DIR, stored_name))
-    return f"/uploads/{stored_name}"
-
-
-def classify_other_request(section_service):
-    sec = section_service or ""
-    if "استشارات أسرية" in sec or any(
-        k in sec for k in ["البول الليلي", "الهلوسة الليلية", "الاتكالية", "الانطوائية", "تأخر في النمو", "لغة الإشارة"]
-    ):
-        return "consultations"
-    if "طلبات تعليمية" in sec or any(k in sec for k in ["معلمون", "مربيين", "مربيات", "رسم"]):
-        return "educational"
-    if "توظيف" in sec or "متقدمين" in sec:
-        return "jobs"
-    if "الدعم الفني" in sec:
-        return "support"
-    return "job_ads"
-
-
-# =========================================================
-# 3. واجهة المنصة (HTML + JS)
-# =========================================================
-HTML_PAGE = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -175,332 +5,655 @@ HTML_PAGE = """
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>الواثق للخدمات العامة</title>
   <style>
-    body { font-family: Tahoma, Arial, sans-serif; background: #f4f6f9; margin: 0; padding: 20px; color: #1f2937; }
-    .container { max-width: 1100px; margin: auto; }
-    header { background: #0f4c81; color: #fff; padding: 20px; border-radius: 12px; margin-bottom: 20px; }
-    header h1 { margin: 0 0 8px; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 16px; }
-    .card { background: #fff; padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-    .card h3 { margin-top: 0; color: #0f4c81; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; }
-    label { display: block; margin-top: 10px; font-size: 13px; font-weight: bold; }
-    input, select, textarea { width: 100%; padding: 8px; margin-top: 4px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; }
-    button { margin-top: 12px; background: #0f4c81; color: #fff; border: none; padding: 10px 14px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; }
-    button.green { background: #15803d; }
-    button.dark { background: #334155; }
-    pre { background: #0f172a; color: #e2e8f0; padding: 12px; border-radius: 8px; overflow: auto; font-size: 12px; max-height: 420px; }
+    :root {
+      --primary: #0f4c81;
+      --primary-dark: #093358;
+      --accent: #0284c7;
+      --success: #15803d;
+      --dark: #334155;
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #cbd5e1;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: Tahoma, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 16px;
+      line-height: 1.6;
+    }
+    .container { max-width: 1200px; margin: auto; }
+    header {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #fff;
+      padding: 22px;
+      border-radius: 14px;
+      margin-bottom: 18px;
+    }
+    header h1 { margin: 0 0 8px; font-size: 24px; }
+    header p { margin: 0 0 10px; font-size: 14px; opacity: 0.95; }
+    .pill {
+      display: inline-block;
+      background: rgba(255,255,255,0.16);
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+    }
+    .nav-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .nav-bar a {
+      text-decoration: none;
+      background: #fff;
+      color: var(--primary);
+      border: 1px solid #cbd5e1;
+      padding: 7px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .nav-bar a:hover {
+      background: var(--primary);
+      color: #fff;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: var(--card);
+      padding: 18px;
+      border-radius: 14px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      border: 1px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .section-tag {
+      display: inline-block;
+      background: #e0f2fe;
+      color: #0369a1;
+      font-size: 11px;
+      font-weight: bold;
+      padding: 3px 9px;
+      border-radius: 999px;
+      margin-bottom: 6px;
+    }
+    .card h3 {
+      margin: 0 0 10px;
+      color: var(--primary);
+      font-size: 17px;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 8px;
+    }
+    .sub-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 12px;
+      margin-top: 12px;
+    }
+    .sub-box h4 {
+      margin: 0 0 8px;
+      font-size: 14px;
+      color: var(--dark);
+    }
+    label {
+      display: block;
+      margin-top: 9px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 8px 10px;
+      margin-top: 4px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 13px;
+      background: #fff;
+    }
+    button {
+      margin-top: 12px;
+      width: 100%;
+      padding: 10px 12px;
+      border: none;
+      border-radius: 8px;
+      background: var(--primary);
+      color: #fff;
+      font-weight: bold;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    button.green { background: var(--success); }
+    button.dark { background: var(--dark); }
+    .alert {
+      margin-top: 8px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      display: none;
+    }
+    .alert.ok { display: block; background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+    .alert.err { display: block; background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+    .req-item {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+      font-size: 13px;
+    }
+    .req-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .badge {
+      background: #dbeafe;
+      color: #1e40af;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: bold;
+    }
+    .muted { color: var(--muted); font-size: 12px; }
+    .ad-card {
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      padding: 8px 10px;
+      border-radius: 8px;
+      margin-top: 8px;
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
 <div class="container">
   <header>
     <h1>الواثق للخدمات العامة</h1>
-    <p>حلول هندسية واقعية لأعطال البناء والصيانة المنزلية + استشارات أسرية + تعليم + توظيف — سرعة الأداء، الخبرة، الثقة والأمانة</p>
-    <small>رسوم الانتقال المسبقة: حد أدنى 3,000 ريال (جيب / كريمي / محفظتي / ون كاش) — نزول الفريق خلال ساعة من الدفع</small>
+    <p>حلول هندسية واقعية لأعطال البناء والصيانة المنزلية + استشارات أسرية + طلبات تعليمية + توظيف — سرعة الأداء، الخبرة، الثقة والأمانة</p>
+    <span class="pill">رسوم الانتقال المسبقة: حد أدنى 3,000 ريال (جيب / كريمي / محفظتي / ون كاش) — نزول الفريق خلال ساعة</span>
   </header>
 
+  <nav class="nav-bar">
+    <a href="#sec-eng">القسم 1: الهندسة والصيانة</a>
+    <a href="#sec-fam">القسم 2: الاستشارات الأسرية</a>
+    <a href="#sec-edu">القسم 3: الطلبات التعليمية</a>
+    <a href="#sec-job">القسم 4: التوظيف</a>
+    <a href="#sec-other">قسم أخرى: إعلانات ودعم فني</a>
+    <a href="#sec-log">سجل الطلبات</a>
+  </nav>
+
   <div class="grid">
-    <!-- 1. إنشاء طلب هندسة وصيانة -->
-    <div class="card">
-      <h3>1. طلب خدمة هندسية / صيانة منزلية</h3>
-      <form id="reqForm" enctype="multipart/form-data">
-        <label>الاسم الكامل</label>
-        <input name="client_name" required placeholder="مثال: محمد علي" />
-        <label>رقم الهاتف</label>
-        <input name="phone" required placeholder="77XXXXXXX" />
-        <label>نوع الخدمة المطلوبة</label>
-        <select name="service" id="engServices"></select>
-        <label>موقع العمل والمكان</label>
-        <input name="location" required placeholder="المدينة / الحي / أقرب معلم" />
-        <label>الفترة الزمنية والوقت</label>
-        <input name="schedule" required placeholder="اليوم - الفترة الصباحية - 10:00 ص" />
-        <label>وصف المشكلة</label>
-        <textarea name="problem" rows="2" placeholder="اشرح العطل باختصار"></textarea>
-        <label>المحفظة الإلكترونية لرسوم الانتقال</label>
-        <select name="wallet">
-          <option>جيب</option><option>كريمي</option><option>محفظتي</option><option>ون كاش</option>
-        </select>
-        <label>رسوم الانتقال المسبقة (لا تقل عن 3000 ريال)</label>
-        <input type="number" name="transfer_fee" min="3000" value="3000" required />
-        <label>رفع صورة إشعار الدفع أونلاين</label>
-        <input type="file" name="receipt_file" accept=".png,.jpg,.jpeg,.webp,.pdf" required />
-        <button type="submit">إرسال الطلب ودفع رسوم الانتقال</button>
-      </form>
-    </div>
+    <!-- واجهة القسم الأول: الهندسة والبناء والصيانة المنزلية -->
+    <section class="card" id="sec-eng">
+      <div>
+        <span class="section-tag">القسم الأول</span>
+        <h3>الهندسة والبناء والصيانة المنزلية</h3>
+        <form id="engForm">
+          <label>نوع الخدمة المطلوبة</label>
+          <select name="service" required>
+            <option>استشارة هندسية في التخطيط والإسقاط</option>
+            <option>مهندسون أكفاء</option>
+            <option>مشرفو مواقع البناء</option>
+            <option>حراسة أمنية لموقع البناء</option>
+            <option>فني بلاط</option>
+            <option>فني سباكة</option>
+            <option>فني تمديدات</option>
+            <option>فني تكييف وتبريد</option>
+            <option>مهندس كهرباء إنشائي</option>
+            <option>فني كهرباء تمديدات</option>
+            <option>صيانة كهربائية</option>
+            <option>مهندس ستلايت</option>
+            <option>فني ديكور</option>
+            <option>فني نجارة</option>
+          </select>
 
-    <!-- 2. استمارة معاينة المهندس وسداد العميل -->
-    <div class="card">
-      <h3>2. دخول المهندس — استمارة المعاينة والتسعير</h3>
-      <form id="inspForm">
-        <label>رقم الطلب</label>
-        <input name="request_id" required placeholder="REQ-XXXXXX" />
-        <label>اسم المهندس المختص</label>
-        <input name="engineer_name" required placeholder="م. خالد..." />
-        <label>تحديد المشكلة (استمارة معاينة العمل)</label>
-        <textarea name="diagnosis" rows="2" required placeholder="تفاصيل المشكلة الفعلية"></textarea>
-        <label>تقييم التكلفة والأجور المتفق عليها (ريال)</label>
-        <input type="number" name="service_cost" min="0" required placeholder="مثال: 15000" />
-        <button type="submit" class="dark">حفظ المعاينة وتسجيل التكلفة في التطبيق</button>
-      </form>
+          <label>الاسم الكامل</label>
+          <input name="client_name" required placeholder="الاسم الرباعي" />
 
-      <h3 style="margin-top:20px;">3. سداد العميل لتكلفة الخدمة</h3>
-      <form id="payForm" enctype="multipart/form-data">
-        <label>رقم الطلب</label>
-        <input name="request_id" required placeholder="REQ-XXXXXX" />
-        <label>المحفظة الإلكترونية</label>
-        <select name="wallet">
-          <option>جيب</option><option>كريمي</option><option>محفظتي</option><option>ون كاش</option>
-        </select>
-        <label>رفع إشعار سداد تكلفة الخدمة</label>
-        <input type="file" name="service_receipt_file" accept=".png,.jpg,.jpeg,.webp,.pdf" required />
-        <button type="submit" class="green">سداد تكلفة الخدمة في موقع الطلب</button>
-      </form>
-    </div>
+          <label>رقم الهاتف</label>
+          <input name="phone" required placeholder="77XXXXXXX" />
 
-    <!-- 4. الأقسام الأخرى -->
-    <div class="card">
-      <h3>4. الأقسام الأخرى (استشارات / تعليم / توظيف / دعم)</h3>
-      <form id="otherForm">
-        <label>اختر القسم والخدمة</label>
-        <select name="section_service" id="otherServices"></select>
-        <label>الاسم / اسم الشركة</label>
-        <input name="name" required />
-        <label>رقم الهاتف</label>
-        <input name="phone" required />
-        <label>تفاصيل الطلب</label>
-        <textarea name="details" rows="3" required placeholder="مثال: استشارة بول ليلي / طلب معلم / طلب موظفين / دعم فني"></textarea>
-        <button type="submit">إرسال الطلب</button>
-      </form>
-    </div>
+          <label>موقع العمل والمكان</label>
+          <input name="location" required placeholder="المدينة / الحي / أقرب معلم" />
+
+          <label>الفترة الزمنية والوقت</label>
+          <input name="schedule" required placeholder="مثال: اليوم - الفترة الصباحية - 10:00 ص" />
+
+          <label>وصف المشكلة</label>
+          <textarea name="problem" rows="2" placeholder="وصف مختصر للعطل"></textarea>
+
+          <label>المحفظة الإلكترونية لرسوم الانتقال</label>
+          <select name="wallet">
+            <option>جيب</option>
+            <option>كريمي</option>
+            <option>محفظتي</option>
+            <option>ون كاش</option>
+          </select>
+
+          <label>رسوم الانتقال المسبقة (لا تقل عن 3,000 ريال)</label>
+          <input type="number" name="transfer_fee" min="3000" step="100" value="3000" required />
+
+          <label>رفع إشعار الدفع أونلاين (اسم الملف أو رقم العملية)</label>
+          <input name="receipt" required placeholder="مثال: إشعار جيب 98765" />
+
+          <button type="submit">تقديم الطلب ودفع رسوم الانتقال</button>
+          <div id="engAlert" class="alert"></div>
+        </form>
+
+        <!-- معاينة المهندس -->
+        <div class="sub-box">
+          <h4>معاينة المهندس وتسجيل التكلفة</h4>
+          <form id="inspForm">
+            <label>رقم الطلب</label>
+            <input name="request_id" required placeholder="REQ-XXXXXX" />
+            <label>اسم المهندس المختص</label>
+            <input name="engineer_name" required placeholder="م. ..." />
+            <label>استمارة معاينة العمل / تحديد المشكلة</label>
+            <textarea name="diagnosis" rows="2" required placeholder="تشخيص المشكلة وأجور العمل"></textarea>
+            <label>تقييم التكلفة والأجور (ريال)</label>
+            <input type="number" name="service_cost" min="0" required placeholder="مثال: 15000" />
+            <button type="submit" class="dark">حفظ المعاينة وتسجيل التكلفة</button>
+            <div id="inspAlert" class="alert"></div>
+          </form>
+        </div>
+
+        <!-- سداد العميل لتكلفة الخدمة -->
+        <div class="sub-box">
+          <h4>سداد العميل لتكلفة الخدمة</h4>
+          <form id="payForm">
+            <label>رقم الطلب</label>
+            <input name="request_id" required placeholder="REQ-XXXXXX" />
+            <label>المحفظة الإلكترونية</label>
+            <select name="wallet">
+              <option>جيب</option>
+              <option>كريمي</option>
+              <option>محفظتي</option>
+              <option>ون كاش</option>
+            </select>
+            <label>إشعار سداد تكلفة الخدمة</label>
+            <input name="service_receipt" required placeholder="رقم العملية أو اسم الإشعار" />
+            <button type="submit" class="green">سداد تكلفة الخدمة</button>
+            <div id="payAlert" class="alert"></div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- واجهة القسم الثاني: الاستشارات الأسرية -->
+    <section class="card" id="sec-fam">
+      <div>
+        <span class="section-tag">القسم الثاني</span>
+        <h3>استشارات أسرية</h3>
+        <form class="simple-sec-form" data-section="استشارات أسرية" data-alert="famAlert">
+          <label>نوع الاستشارة الأسرية</label>
+          <select name="service" required>
+            <option>البول الليلي</option>
+            <option>الهلوسة الليلية</option>
+            <option>الاتكالية</option>
+            <option>الانطوائية</option>
+            <option>تأخر في النمو</option>
+            <option>استشارات أسرية</option>
+            <option>لغة الإشارة</option>
+          </select>
+
+          <label>الاسم الكامل</label>
+          <input name="name" required placeholder="الاسم الرباعي" />
+
+          <label>رقم الهاتف</label>
+          <input name="phone" required placeholder="77XXXXXXX" />
+
+          <label>المكان والفترة الزمنية المناسبة</label>
+          <input name="schedule" required placeholder="المكان والوقت المناسب" />
+
+          <label>تفاصيل الحالة / الاستشارة</label>
+          <textarea name="details" rows="4" required placeholder="اشرح الحالة باختصار"></textarea>
+
+          <button type="submit">إرسال طلب الاستشارة الأسرية</button>
+          <div id="famAlert" class="alert"></div>
+        </form>
+      </div>
+    </section>
+
+    <!-- واجهة القسم الثالث: الطلبات التعليمية -->
+    <section class="card" id="sec-edu">
+      <div>
+        <span class="section-tag">القسم الثالث</span>
+        <h3>طلبات تعليمية</h3>
+        <form class="simple-sec-form" data-section="طلبات تعليمية" data-alert="eduAlert">
+          <label>نوع الكادر التعليمي المطلوب</label>
+          <select name="service" required>
+            <option>معلمون</option>
+            <option>مربيين</option>
+            <option>مربيات</option>
+            <option>معلمون مواد تخصصية</option>
+            <option>معلمون رسم</option>
+          </select>
+
+          <label>الاسم الكامل / الجهة</label>
+          <input name="name" required placeholder="الاسم" />
+
+          <label>رقم الهاتف</label>
+          <input name="phone" required placeholder="77XXXXXXX" />
+
+          <label>المكان والفترة الزمنية</label>
+          <input name="schedule" required placeholder="المنطقة والوقت المطلوب" />
+
+          <label>تفاصيل الطلب التعليمي</label>
+          <textarea name="details" rows="4" required placeholder="المادة أو المرحلة أو عدد الأيام"></textarea>
+
+          <button type="submit">إرسال الطلب التعليمي</button>
+          <div id="eduAlert" class="alert"></div>
+        </form>
+      </div>
+    </section>
+
+    <!-- واجهة القسم الرابع: طلبات التوظيف -->
+    <section class="card" id="sec-job">
+      <div>
+        <span class="section-tag">القسم الرابع</span>
+        <h3>طلبات توظيف</h3>
+
+        <div class="sub-box">
+          <h4>طلبات توظيف من الشركات</h4>
+          <form class="simple-sec-form" data-section="طلبات توظيف من الشركات" data-alert="corpJobAlert">
+            <label>الفئة المطلوبة</label>
+            <select name="service" required>
+              <option>إداريون</option>
+              <option>مهندسون</option>
+              <option>عمال نظافة</option>
+              <option>متعهد خدمات</option>
+            </select>
+            <label>اسم الشركة / الجهة</label>
+            <input name="name" required placeholder="اسم الشركة" />
+            <label>رقم الهاتف</label>
+            <input name="phone" required placeholder="77XXXXXXX" />
+            <label>الموقع والفترة الزمنية</label>
+            <input name="schedule" required placeholder="الموقع وموعد التواصل" />
+            <label>تفاصيل الطلب الوظيفي</label>
+            <textarea name="details" rows="3" required placeholder="العدد، المؤهلات، والشروط"></textarea>
+            <button type="submit">إرسال طلب توظيف للشركة</button>
+            <div id="corpJobAlert" class="alert"></div>
+          </form>
+        </div>
+
+        <div class="sub-box">
+          <h4>طلب تسجيل متقدمين للحصول على الوظيفة</h4>
+          <form class="simple-sec-form" data-section="تسجيل متقدمين للوظائف" data-alert="appJobAlert">
+            <label>الاسم الكامل للمتقدم</label>
+            <input name="name" required placeholder="الاسم الرباعي" />
+            <label>رقم الهاتف</label>
+            <input name="phone" required placeholder="77XXXXXXX" />
+            <label>التخصص / الوظيفة المطلوبة</label>
+            <input name="service" required placeholder="مثال: مهندس / إداري / فني / متعهد خدمات" />
+            <label>المكان والخبرة</label>
+            <textarea name="details" rows="3" required placeholder="المدينة، سنوات الخبرة، والمهارات"></textarea>
+            <button type="submit" class="dark">تسجيل بيانات المتقدم</button>
+            <div id="appJobAlert" class="alert"></div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- واجهة قسم أخرى: إعلانات فرص توظيف ودعم فني -->
+    <section class="card" id="sec-other">
+      <div>
+        <span class="section-tag">قسم أخرى</span>
+        <h3>إعلانات عن فرص توظيف وطلب الدعم الفني</h3>
+
+        <div class="sub-box">
+          <h4>إعلانات عن فرص توظيف متاحة</h4>
+          <div id="jobAdsList"></div>
+          <form class="simple-sec-form" data-section="إعلان عن فرص توظيف" data-alert="adAlert" style="margin-top:10px;">
+            <label>إضافة إعلان فرصة توظيف جديدة</label>
+            <input name="service" required placeholder="المسمى الوظيفي" />
+            <input name="name" required placeholder="اسم الجهة المعلنة" />
+            <input name="phone" required placeholder="رقم التواصل" />
+            <textarea name="details" rows="2" required placeholder="تفاصيل الفرصة الوظيفية"></textarea>
+            <button type="submit">نشر إعلان الوظيفة</button>
+            <div id="adAlert" class="alert"></div>
+          </form>
+        </div>
+
+        <div class="sub-box">
+          <h4>طلب الدعم الفني</h4>
+          <form class="simple-sec-form" data-section="طلب الدعم الفني" data-alert="supAlert">
+            <label>الاسم الكامل</label>
+            <input name="name" required />
+            <label>رقم الهاتف</label>
+            <input name="phone" required placeholder="77XXXXXXX" />
+            <label>وصف مشكلة الدعم الفني</label>
+            <textarea name="details" rows="3" required placeholder="اشرح المشكلة أو الاستفسار"></textarea>
+            <button type="submit" class="dark">إرسال طلب الدعم الفني</button>
+            <div id="supAlert" class="alert"></div>
+          </form>
+        </div>
+      </div>
+    </section>
   </div>
 
-  <div class="card" style="margin-top:20px;">
-    <h3>البيانات المحفوظة في قاعدة البيانات (SQLite)</h3>
-    <button onclick="loadState()" style="width:auto;">تحديث البيانات</button>
-    <pre id="stateView">جاري التحميل...</pre>
-  </div>
+  <!-- سجل الطلبات -->
+  <section class="card" id="sec-log" style="margin-top:18px;">
+    <div class="req-head">
+      <h3 style="margin:0; border:none; padding:0;">سجل الطلبات المسجلة في المنصة</h3>
+      <button type="button" onclick="clearAllData()" style="width:auto; margin:0; background:#64748b; padding:6px 12px; font-size:12px;">مسح البيانات التجريبية</button>
+    </div>
+    <div id="requestsLog" style="margin-top:12px;"></div>
+  </section>
 </div>
 
 <script>
-  const catalog = {{ catalog_json | safe }};
-  const engSelect = document.getElementById('engServices');
-  const otherSelect = document.getElementById('otherServices');
+  const STORAGE_KEY = "alwathiq_all_sections_v1";
 
-  for (const [sec, items] of Object.entries(catalog)) {
-    items.forEach(item => {
-      const opt = document.createElement('option');
-      opt.value = item;
-      opt.textContent = sec.startsWith('القسم الأول') ? item : `${sec} — ${item}`;
-      if (sec.startsWith('القسم الأول')) engSelect.appendChild(opt.cloneNode(true));
-      else otherSelect.appendChild(opt);
+  const DEFAULT_ADS = [
+    { title: "مهندس موقع وإشراف", name: "الواثق للخدمات العامة", phone: "77XXXXXXX", details: "مطلوب مهندس إشراف لمواقع البناء" },
+    { title: "فني سباكة وتمديدات", name: "الواثق للخدمات العامة", phone: "77XXXXXXX", details: "استجابة سريعة للصيانة المنزلية" }
+  ];
+
+  function loadStore() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if (parsed) return parsed;
+    } catch {}
+    return { engRequests: [], otherRequests: [], ads: DEFAULT_ADS };
+  }
+
+  function saveStore(store) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+    renderAll();
+  }
+
+  function showAlert(id, msg, ok = true) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = msg;
+    el.className = "alert " + (ok ? "ok" : "err");
+  }
+
+  function makeId(prefix) {
+    return prefix + "-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+  }
+
+  // القسم الأول: طلب هندسة وصيانة
+  document.getElementById("engForm").addEventListener("submit", e => {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(e.target).entries());
+    const fee = Number(d.transfer_fee || 0);
+    if (fee < 3000) {
+      showAlert("engAlert", "رسوم الانتقال المسبقة يجب ألا تقل عن 3,000 ريال.", false);
+      return;
+    }
+    const store = loadStore();
+    const id = makeId("REQ");
+    store.engRequests.unshift({
+      id,
+      at: new Date().toLocaleString("ar-YE"),
+      service: d.service,
+      clientName: d.client_name,
+      phone: d.phone,
+      location: d.location,
+      schedule: d.schedule,
+      problem: d.problem,
+      wallet: d.wallet,
+      transferFee: fee,
+      receipt: d.receipt,
+      status: "ينطلق فريق العمل خلال ساعة من الدفع",
+      inspection: null,
+      serviceCost: null,
+      servicePayment: null
     });
+    saveStore(store);
+    showAlert("engAlert", `تم تسجيل الطلب (${id}) وسينطلق الفريق خلال ساعة.`);
+    e.target.reset();
+    e.target.transfer_fee.value = 3000;
+  });
+
+  // معاينة المهندس
+  document.getElementById("inspForm").addEventListener("submit", e => {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(e.target).entries());
+    const store = loadStore();
+    const req = store.engRequests.find(r => r.id === d.request_id.trim().toUpperCase());
+    if (!req) {
+      showAlert("inspAlert", "رقم الطلب غير موجود.", false);
+      return;
+    }
+    req.inspection = { engineerName: d.engineer_name, diagnosis: d.diagnosis };
+    req.serviceCost = Number(d.service_cost || 0);
+    req.status = "تمت المعاينة وتسجيل التكلفة — بانتظار سداد العميل";
+    saveStore(store);
+    showAlert("inspAlert", `تم تسجيل المعاينة والتكلفة (${req.serviceCost} ريال) للطلب ${req.id}.`);
+    e.target.reset();
+  });
+
+  // سداد تكلفة الخدمة
+  document.getElementById("payForm").addEventListener("submit", e => {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(e.target).entries());
+    const store = loadStore();
+    const req = store.engRequests.find(r => r.id === d.request_id.trim().toUpperCase());
+    if (!req) {
+      showAlert("payAlert", "رقم الطلب غير موجود.", false);
+      return;
+    }
+    if (req.serviceCost === null) {
+      showAlert("payAlert", "يجب تسجيل استمارة المعاينة والتكلفة من المهندس أولًا.", false);
+      return;
+    }
+    req.servicePayment = { wallet: d.wallet, amount: req.serviceCost, receipt: d.service_receipt };
+    req.status = "تم سداد تكلفة الخدمة وجاهز للتنفيذ";
+    saveStore(store);
+    showAlert("payAlert", `تم سداد تكلفة الخدمة (${req.serviceCost} ريال) للطلب ${req.id}.`);
+    e.target.reset();
+  });
+
+  // الأقسام 2 و 3 و 4 و أخرى
+  document.querySelectorAll(".simple-sec-form").forEach(form => {
+    form.addEventListener("submit", e => {
+      e.preventDefault();
+      const d = Object.fromEntries(new FormData(form).entries());
+      const section = form.dataset.section;
+      const alertId = form.dataset.alert;
+      const store = loadStore();
+
+      if (section === "إعلان عن فرص توظيف") {
+        store.ads.unshift({
+          title: d.service,
+          name: d.name,
+          phone: d.phone,
+          details: d.details
+        });
+      }
+
+      const id = makeId("SEC");
+      store.otherRequests.unshift({
+        id,
+        at: new Date().toLocaleString("ar-YE"),
+        section,
+        service: d.service,
+        name: d.name,
+        phone: d.phone,
+        schedule: d.schedule || "-",
+        details: d.details
+      });
+      saveStore(store);
+      showAlert(alertId, `تم إرسال الطلب بنجاح (${id}).`);
+      form.reset();
+    });
+  });
+
+  function clearAllData() {
+    localStorage.removeItem(STORAGE_KEY);
+    renderAll();
   }
 
-  async function postForm(url, formEl) {
-    const res = await fetch(url, { method: 'POST', body: new FormData(formEl) });
-    const out = await res.json();
-    alert(out.message || out.error || JSON.stringify(out));
-    loadState();
+  function renderAll() {
+    const store = loadStore();
+
+    // إعلانات الوظائف
+    const adsBox = document.getElementById("jobAdsList");
+    adsBox.innerHTML = store.ads.map(ad => `
+      <div class="ad-card">
+        <strong>${ad.title}</strong> — ${ad.name} (${ad.phone})
+        <div class="muted">${ad.details}</div>
+      </div>
+    `).join("");
+
+    // سجل الطلبات
+    const logBox = document.getElementById("requestsLog");
+    if (!store.engRequests.length && !store.otherRequests.length) {
+      logBox.innerHTML = `<p class="muted">لا توجد طلبات مسجلة بعد.</p>`;
+      return;
+    }
+
+    let html = "";
+    store.engRequests.forEach(r => {
+      html += `
+        <div class="req-item">
+          <div class="req-head">
+            <strong>${r.id} — القسم 1: ${r.service}</strong>
+            <span class="badge">${r.status}</span>
+          </div>
+          <div>العميل: ${r.clientName} (${r.phone}) | الموقع: ${r.location} | الوقت: ${r.schedule}</div>
+          <div class="muted">رسوم الانتقال: ${r.transferFee} ريال (${r.wallet}) — إشعار: ${r.receipt} | ${r.at}</div>
+          ${r.inspection ? `<div><strong>معاينة م. ${r.inspection.engineerName}:</strong> ${r.inspection.diagnosis} — التكلفة: <strong>${r.serviceCost} ريال</strong></div>` : ""}
+          ${r.servicePayment ? `<div><strong>سداد الخدمة:</strong> ${r.servicePayment.amount} ريال (${r.servicePayment.wallet}) — إشعار: ${r.servicePayment.receipt}</div>` : ""}
+        </div>
+      `;
+    });
+
+    store.otherRequests.forEach(o => {
+      html += `
+        <div class="req-item">
+          <div class="req-head">
+            <strong>${o.id} — ${o.section}: ${o.service}</strong>
+            <span class="badge">مسجل</span>
+          </div>
+          <div>الاسم/الجهة: ${o.name} (${o.phone}) | الوقت/المكان: ${o.schedule} | ${o.at}</div>
+          <div>${o.details}</div>
+        </div>
+      `;
+    });
+
+    logBox.innerHTML = html;
   }
 
-  document.getElementById('reqForm').onsubmit = e => { e.preventDefault(); postForm('/api/requests', e.target); };
-  document.getElementById('inspForm').onsubmit = e => { e.preventDefault(); postForm(`/api/requests/${e.target.request_id.value}/inspection`, e.target); };
-  document.getElementById('payForm').onsubmit = e => { e.preventDefault(); postForm(`/api/requests/${e.target.request_id.value}/pay-service`, e.target); };
-  document.getElementById('otherForm').onsubmit = e => { e.preventDefault(); postForm('/api/other-requests', e.target); };
-
-  async function loadState() {
-    const res = await fetch('/api/state');
-    const data = await res.json();
-    document.getElementById('stateView').textContent = JSON.stringify(data, null, 2);
-  }
-  loadState();
+  renderAll();
 </script>
 </body>
 </html>
-"""
-
-
-# =========================================================
-# 4. نقاط الـ API وعرض الملفات المرفوعة
-# =========================================================
-@app.route("/")
-def home():
-    return render_template_string(HTML_PAGE, catalog_json=json.dumps(CATALOG, ensure_ascii=False))
-
-
-@app.route("/uploads/<filename>")
-def uploaded_file(filename):
-    return send_from_directory(UPLOAD_DIR, filename)
-
-
-@app.route("/api/catalog", methods=["GET"])
-def get_catalog():
-    return jsonify({
-        "platform": "الواثق للخدمات العامة",
-        "wallets": WALLETS,
-        "min_transfer_fee": MIN_TRANSFER_FEE,
-        "dispatch_sla": "خلال ساعة من تسجيل الطلب ودفع رسوم الانتقال",
-        "catalog": CATALOG,
-    })
-
-
-@app.route("/api/requests", methods=["POST"])
-def create_service_request():
-    data = request.form
-    wallet = data.get("wallet")
-    if wallet not in WALLETS:
-        return jsonify({"error": "يرجى اختيار محفظة معتمدة: جيب، كريمي، محفظتي، ون كاش"}), 400
-
-    try:
-        fee = float(data.get("transfer_fee", 0))
-    except ValueError:
-        return jsonify({"error": "قيمة رسوم الانتقال غير صحيحة"}), 400
-
-    if fee < MIN_TRANSFER_FEE:
-        return jsonify({"error": f"رسوم الانتقال المسبقة يجب ألا تقل عن {MIN_TRANSFER_FEE} ريال"}), 400
-
-    try:
-        receipt_url = save_uploaded_receipt(request.files.get("receipt_file"), "transfer")
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-
-    if not receipt_url:
-        return jsonify({"error": "يجب رفع إشعار دفع رسوم الانتقال أونلاين"}), 400
-
-    req_id = f"REQ-{uuid.uuid4().hex[:6].upper()}"
-    created_at = datetime.now().isoformat(timespec="seconds")
-    dispatch_status = "ينطلق فريق العمل خلال ساعة من الدفع"
-    status = "تم استلام الطلب وجاري نزول الفريق خلال ساعة"
-
-    with get_db() as conn:
-        conn.execute(
-            """
-            INSERT INTO service_requests (
-                id, created_at, client_name, phone, service, location, schedule, problem,
-                wallet, transfer_fee, transfer_receipt, dispatch_status, status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                req_id,
-                created_at,
-                data.get("client_name"),
-                data.get("phone"),
-                data.get("service"),
-                data.get("location"),
-                data.get("schedule"),
-                data.get("problem", ""),
-                wallet,
-                fee,
-                receipt_url,
-                dispatch_status,
-                status,
-            ),
-        )
-
-    return jsonify({"message": f"تم إنشاء الطلب بنجاح ({req_id}) وسينطلق الفريق خلال ساعة", "request_id": req_id}), 201
-
-
-@app.route("/api/requests/<req_id>/inspection", methods=["POST"])
-def submit_inspection(req_id):
-    data = request.form if request.form else (request.get_json() or {})
-    with get_db() as conn:
-        row = conn.execute("SELECT id FROM service_requests WHERE id = ?", (req_id,)).fetchone()
-        if not row:
-            return jsonify({"error": "الطلب غير موجود"}), 404
-
-        cost = float(data.get("service_cost", 0))
-        inspection_at = datetime.now().isoformat(timespec="seconds")
-        status = "تمت المعاينة وتسجيل التكلفة — بانتظار سداد العميل"
-
-        conn.execute(
-            """
-            UPDATE service_requests
-            SET engineer_name = ?, diagnosis = ?, inspection_at = ?, service_cost = ?, status = ?
-            WHERE id = ?
-            """,
-            (data.get("engineer_name"), data.get("diagnosis"), inspection_at, cost, status, req_id),
-        )
-
-    return jsonify({"message": "تم حفظ استمارة المعاينة وتسجيل التكلفة في التطبيق", "request_id": req_id})
-
-
-@app.route("/api/requests/<req_id>/pay-service", methods=["POST"])
-def pay_service_cost(req_id):
-    data = request.form
-    wallet = data.get("wallet")
-    if wallet not in WALLETS:
-        return jsonify({"error": "محفظة غير معتمدة"}), 400
-
-    with get_db() as conn:
-        row = conn.execute("SELECT service_cost FROM service_requests WHERE id = ?", (req_id,)).fetchone()
-        if not row:
-            return jsonify({"error": "الطلب غير موجود"}), 404
-        if row["service_cost"] is None:
-            return jsonify({"error": "يجب على المهندس تعبئة استمارة المعاينة وتحديد التكلفة أولًا"}), 400
-
-        try:
-            receipt_url = save_uploaded_receipt(request.files.get("service_receipt_file"), "service")
-        except ValueError as e:
-            return jsonify({"error": str(e)}), 400
-
-        if not receipt_url:
-            return jsonify({"error": "يجب رفع إشعار سداد تكلفة الخدمة"}), 400
-
-        paid_at = datetime.now().isoformat(timespec="seconds")
-        status = "تم سداد تكلفة الخدمة وجاهز للتنفيذ/الإغلاق"
-
-        conn.execute(
-            """
-            UPDATE service_requests
-            SET service_wallet = ?, service_receipt = ?, service_paid_at = ?, status = ?
-            WHERE id = ?
-            """,
-            (wallet, receipt_url, paid_at, status, req_id),
-        )
-
-    return jsonify({"message": "تم سداد تكلفة الخدمة بنجاح في موقع الطلب", "request_id": req_id})
-
-
-@app.route("/api/other-requests", methods=["POST"])
-def create_other_request():
-    data = request.form if request.form else (request.get_json() or {})
-    sec = data.get("section_service", "")
-    group = classify_other_request(sec)
-    entry_id = f"OTH-{uuid.uuid4().hex[:6].upper()}"
-    created_at = datetime.now().isoformat(timespec="seconds")
-
-    with get_db() as conn:
-        if group == "job_ads":
-            conn.execute(
-                "INSERT INTO job_ads (id, created_at, title, details) VALUES (?, ?, ?, ?)",
-                (entry_id, created_at, data.get("name"), data.get("details")),
-            )
-        else:
-            conn.execute(
-                """
-                INSERT INTO other_requests (id, created_at, category_group, section_service, name, phone, details)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                (entry_id, created_at, group, sec, data.get("name"), data.get("phone"), data.get("details")),
-            )
-
-    return jsonify({"message": "تم تسجيل طلبك في القسم المختص بنجاح", "id": entry_id}), 201
-
-
-@app.route("/api/state", methods=["GET"])
-def get_state():
-    with get_db() as conn:
-        requests_rows = [dict(r) for r in conn.execute("SELECT * FROM service_requests ORDER BY created_at DESC").fetchall()]
-        other_rows = [dict(r) for r in conn.execute("SELECT * FROM other_requests ORDER BY created_at DESC").fetchall()]
-        job_ads_rows = [dict(r) for r in conn.execute("SELECT * FROM job_ads ORDER BY created_at DESC").fetchall()]
-
-    return jsonify({
-        "service_requests": requests_rows,
-        "other_requests": other_rows,
-        "job_ads": job_ads_rows,
-    })
-
-
-if __name__ == "__main__":
-    init_db()
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
